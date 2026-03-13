@@ -13,4 +13,4 @@ Edit tasks
 Delete tasks
 
 Live Demo
-[https://krishshna.github.io/task-manager-web-app](https://krishshna.github.io/task-management-web-app/)
+https://krishshna.github.io/task-management-web-app/
