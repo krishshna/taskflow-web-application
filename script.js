@@ -1,3 +1,5 @@
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
 function addTask() {
 
     let input = document.getElementById("taskInput");
@@ -7,6 +9,9 @@ function addTask() {
         alert("Please enter a task");
         return;
     }
+
+    tasks.push(taskText);
+    localStorage.setItem("tasks", JSON.stringify(tasks));
 
     let li = document.createElement("li");
 
@@ -28,6 +33,7 @@ function addTask() {
 
     deleteBtn.onclick = function() {
         li.remove();
+        updateTaskStats();
     };
 
     let checkbox = document.createElement("input");
@@ -54,3 +60,49 @@ function toggleTask(checkbox) {
     taskText.classList.toggle("completed");
     
 }
+
+function loadTasks() {
+
+    tasks.forEach(task => {
+
+        let li = document.createElement("li");
+
+        let span = document.createElement("span");
+        span.textContent = task;
+
+        let checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.onchange = function() {
+            span.classList.toggle("completed");
+            updateTaskStats();
+        };
+
+        let deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.onclick = function() {
+            li.remove();
+        };
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(deleteBtn);
+
+        document.getElementById("taskList").appendChild(li);
+
+    });
+
+}
+
+
+function updateTaskStats() {
+    
+    let total = document.querySelectorAll("#taskList li").length;
+    let completed = document.querySelectorAll(".completed").length;
+    let pending = total - completed;
+    
+    document.getElementById("taskStats").textContent =
+    `Total: ${total} | Completed: ${completed} | Pending: ${pending}`;
+}
+
+loadTasks();
+updateTaskStats();
