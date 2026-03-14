@@ -30,6 +30,14 @@ function addTask() {
         li.remove();
     };
 
+    let checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+
+    checkbox.onchange = function() {
+        span.classList.toggle("completed");
+    };
+
+    li.appendChild(checkbox);
     li.appendChild(span);
     li.appendChild(editBtn);
     li.appendChild(deleteBtn);
@@ -37,4 +45,12 @@ function addTask() {
     document.getElementById("taskList").appendChild(li);
 
     input.value = "";
+}
+
+function toggleTask(checkbox) {
+
+    let taskText = checkbox.nextElementSibling;
+    
+    taskText.classList.toggle("completed");
+    
 }
