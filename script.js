@@ -1,5 +1,5 @@
 /* ============================================
-   TASKFLOW — script.js (Supabase edition)
+   TASKFLOW — script.js (Auth + Supabase)
    ============================================ */
 
 // ---- SUPABASE CONFIG ----
@@ -15,32 +15,182 @@ let currentFilter = 'all';
 let currentSort = 'newest';
 let searchQuery = '';
 let editingId = null;
-let isLoading = false;
+let currentUser = null;
 
 // ---- INIT ----
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
-  bindEvents();
-  fetchTasks();
+  bindAuthEvents();
+  bindAppEvents();
+
+  // Listen for auth state changes (handles Google OAuth redirect too)
+  db.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      showApp();
+    } else {
+      currentUser = null;
+      showAuth();
+    }
+  });
 });
 
-// ---- THEME (still localStorage — fine for preferences) ----
+// ---- THEME ----
 function applyTheme() {
   const theme = localStorage.getItem('taskflow_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', theme);
 }
 
-// ---- SUPABASE CRUD ----
+// ---- SHOW/HIDE SCREENS ----
+function showApp() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
 
+  // Set avatar letter from email
+  const email = currentUser.email || '';
+  document.getElementById('userAvatar').textContent = email[0].toUpperCase();
+  document.getElementById('userEmail').textContent = email;
+
+  fetchTasks();
+}
+
+function showAuth() {
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+  tasks = [];
+}
+
+// ---- AUTH EVENTS ----
+function bindAuthEvents() {
+  // Tab switching
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.tab;
+      document.getElementById('loginForm').classList.toggle('hidden', target !== 'login');
+      document.getElementById('signupForm').classList.toggle('hidden', target !== 'signup');
+      clearAuthError();
+    });
+  });
+
+  // Login
+  document.getElementById('loginBtn').addEventListener('click', handleLogin);
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleLogin();
+  });
+
+  // Signup
+  document.getElementById('signupBtn').addEventListener('click', handleSignup);
+  document.getElementById('signupConfirm').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSignup();
+  });
+
+  // Google (both buttons do the same thing)
+  document.getElementById('googleLoginBtn').addEventListener('click', handleGoogle);
+  document.getElementById('googleSignupBtn').addEventListener('click', handleGoogle);
+
+  // Sign out
+  document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
+
+  // User menu toggle
+  document.getElementById('userAvatar').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('userDropdown').classList.toggle('open');
+  });
+  document.addEventListener('click', () => {
+    document.getElementById('userDropdown').classList.remove('open');
+  });
+}
+
+// ---- AUTH HANDLERS ----
+async function handleLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) { setAuthError('Please fill in all fields.'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    setAuthError(friendlyAuthError(error.message));
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+  // onAuthStateChange handles the rest
+}
+
+async function handleSignup() {
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const confirm  = document.getElementById('signupConfirm').value;
+
+  if (!email || !password || !confirm) { setAuthError('Please fill in all fields.'); return; }
+  if (password.length < 6)             { setAuthError('Password must be at least 6 characters.'); return; }
+  if (password !== confirm)            { setAuthError('Passwords do not match.'); return; }
+
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating account…';
+
+  const { error } = await db.auth.signUp({ email, password });
+
+  if (error) {
+    setAuthError(friendlyAuthError(error.message));
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  } else {
+    setAuthError('');
+    showToast('Account created! Check your email to confirm, then sign in.');
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
+}
+
+async function handleGoogle() {
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if (error) setAuthError(friendlyAuthError(error.message));
+}
+
+async function handleSignOut() {
+  await db.auth.signOut();
+  tasks = [];
+  showToast('Signed out.');
+}
+
+function setAuthError(msg) {
+  document.getElementById('authError').textContent = msg;
+}
+
+function clearAuthError() {
+  document.getElementById('authError').textContent = '';
+}
+
+function friendlyAuthError(msg) {
+  if (msg.includes('Invalid login'))      return 'Incorrect email or password.';
+  if (msg.includes('already registered')) return 'An account with this email already exists.';
+  if (msg.includes('valid email'))        return 'Please enter a valid email address.';
+  return msg;
+}
+
+// ---- SUPABASE TASK CRUD ----
 async function fetchTasks() {
   setLoading(true);
   const { data, error } = await db
     .from('tasks')
     .select('*')
+    .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false });
 
   if (error) {
-    showToast('Failed to load tasks. Check your connection.');
+    showToast('Failed to load tasks.');
     console.error(error);
   } else {
     tasks = data.map(normalizeTask);
@@ -59,6 +209,7 @@ async function addTaskToDB(taskData) {
       due:       taskData.due || null,
       notes:     taskData.notes || null,
       completed: false,
+      user_id:   currentUser.id,
     }])
     .select()
     .single();
@@ -76,21 +227,20 @@ async function updateTaskInDB(id, updates) {
   if (updates.notes     !== undefined) payload.notes     = updates.notes || null;
   if (updates.completed !== undefined) payload.completed = updates.completed;
 
-  const { error } = await db.from('tasks').update(payload).eq('id', id);
+  const { error } = await db.from('tasks').update(payload).eq('id', id).eq('user_id', currentUser.id);
   if (error) throw error;
 }
 
 async function deleteTaskFromDB(id) {
-  const { error } = await db.from('tasks').delete().eq('id', id);
+  const { error } = await db.from('tasks').delete().eq('id', id).eq('user_id', currentUser.id);
   if (error) throw error;
 }
 
 async function deleteCompletedFromDB() {
-  const { error } = await db.from('tasks').delete().eq('completed', true);
+  const { error } = await db.from('tasks').delete().eq('completed', true).eq('user_id', currentUser.id);
   if (error) throw error;
 }
 
-// Normalize Supabase snake_case → camelCase
 function normalizeTask(row) {
   return {
     id:        row.id,
@@ -104,15 +254,15 @@ function normalizeTask(row) {
   };
 }
 
-// ---- EVENTS ----
-function bindEvents() {
+// ---- APP EVENTS ----
+function bindAppEvents() {
   document.getElementById('addBtn').addEventListener('click', addTask);
   document.getElementById('taskInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') addTask();
   });
 
   document.getElementById('themeToggle').addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme');
+    const cur  = document.documentElement.getAttribute('data-theme');
     const next = cur === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('taskflow_theme', next);
@@ -212,14 +362,14 @@ async function toggleTask(id) {
   if (!task) return;
 
   const newVal = !task.completed;
-  task.completed = newVal; // optimistic
+  task.completed = newVal;
   renderTasks();
 
   try {
     await updateTaskInDB(id, { completed: newVal });
   } catch (err) {
     console.error(err);
-    task.completed = !newVal; // revert
+    task.completed = !newVal;
     renderTasks();
     showToast('Failed to update. Try again.');
   }
@@ -301,7 +451,6 @@ function getFilteredSortedTasks() {
   let list = tasks.filter(t => {
     if (searchQuery && !t.text.toLowerCase().includes(searchQuery) &&
         !(t.notes && t.notes.toLowerCase().includes(searchQuery))) return false;
-
     if (currentFilter === 'pending')   return !t.completed;
     if (currentFilter === 'completed') return t.completed;
     if (currentFilter === 'high')      return t.priority === 'high' && !t.completed;
@@ -346,12 +495,12 @@ function renderTasks() {
 }
 
 function createTaskEl(task) {
-  const today    = new Date().toISOString().split('T')[0];
+  const today     = new Date().toISOString().split('T')[0];
   const isOverdue = task.due && task.due < today && !task.completed;
 
   const li = document.createElement('div');
   li.className = `task-item${task.completed ? ' completed' : ''}`;
-  li.dataset.taskId  = task.id;
+  li.dataset.taskId   = task.id;
   li.dataset.priority = task.priority;
 
   const categoryEmoji = { personal:'👤', work:'💼', health:'❤️', learning:'📚', other:'📌' };
@@ -414,18 +563,15 @@ function updateStats() {
   document.getElementById('progressPct').textContent  = pct + '%';
 }
 
-// ---- LOADING STATE ----
+// ---- LOADING ----
 function setLoading(on) {
-  isLoading = on;
-  const list  = document.getElementById('taskList');
-  const empty = document.getElementById('emptyState');
   if (on) {
-    list.innerHTML = `
+    document.getElementById('taskList').innerHTML = `
       <div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:14px;">
         <div style="font-size:28px;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block">⟳</div>
         <div>Loading tasks…</div>
       </div>`;
-    empty.classList.remove('visible');
+    document.getElementById('emptyState').classList.remove('visible');
   }
 }
 
