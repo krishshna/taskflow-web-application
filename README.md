@@ -2,7 +2,7 @@
 
 A full-stack task management web app with authentication, built with vanilla JavaScript and Supabase.
 
-🔗 **Live Demo:** [taskflow-web-application.vercel.app](https://taskflow-web-application.vercel.app)
+🔗 **Live Demo:** [taskflow.com](https://taskflow-web-application-gamma.vercel.app/)
 
 ---
 
