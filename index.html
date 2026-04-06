@@ -1,23 +1,182 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Task Manager</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Taskflow — Stay in Motion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-<h1>Task Manager</h1>
+  <div class="grain-overlay"></div>
 
-<input type="text" id="taskInput" placeholder="Enter task">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-mark">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="logo-text">Taskflow</span>
+    </div>
+    <div class="header-right">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="clear-all-btn" id="clearAllBtn" title="Clear completed tasks">Clear Done</button>
+    </div>
+  </header>
 
-<button onclick="addTask()">Add Task</button>
+  <!-- Hero / Input Section -->
+  <main class="main-content">
 
-<p id="taskStats">Total: 0 | Completed: 0 | Pending: 0</p>
+    <section class="hero">
+      <div class="hero-text">
+        <h1 class="hero-title">Stay in<br><em>Motion.</em></h1>
+        <p class="hero-sub">Capture tasks. Get them done. Move forward.</p>
+      </div>
 
-<ul id="taskList"></ul>
+      <div class="input-card">
+        <div class="input-row">
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <input type="text" id="taskInput" placeholder="What needs to be done?" autocomplete="off" maxlength="120"/>
+          </div>
+          <div class="input-meta">
+            <select id="taskPriority">
+              <option value="low">🟢 Low</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+            <select id="taskCategory">
+              <option value="personal">👤 Personal</option>
+              <option value="work">💼 Work</option>
+              <option value="health">❤️ Health</option>
+              <option value="learning">📚 Learning</option>
+              <option value="other">📌 Other</option>
+            </select>
+            <input type="date" id="taskDue" title="Due date (optional)"/>
+          </div>
+          <button class="add-btn" id="addBtn">
+            <span>Add Task</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
 
-<script src="script.js"></script>
+        <!-- Stats bar -->
+        <div class="stats-bar">
+          <div class="stat">
+            <span class="stat-num" id="statTotal">0</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num" id="statPending">0</span>
+            <span class="stat-label">Pending</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat">
+            <span class="stat-num" id="statDone">0</span>
+            <span class="stat-label">Done</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <span class="stat-label" id="progressPct">0%</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
+    <!-- Filters & Search -->
+    <section class="controls-bar">
+      <div class="search-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search tasks…"/>
+      </div>
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+        <button class="filter-btn" data-filter="completed">Completed</button>
+        <button class="filter-btn" data-filter="high">🔴 High</button>
+        <button class="filter-btn" data-filter="overdue">⚠️ Overdue</button>
+      </div>
+      <div class="sort-wrap">
+        <label>Sort:</label>
+        <select id="sortSelect">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="priority">Priority</option>
+          <option value="due">Due Date</option>
+          <option value="alpha">A–Z</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Task List -->
+    <section class="task-section">
+      <div id="taskList" class="task-list"></div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">✦</div>
+        <p>No tasks here yet.</p>
+        <span>Add one above to get started.</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Task</h2>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <label>Task</label>
+        <input type="text" id="editInput" maxlength="120" placeholder="Task description"/>
+        <div class="modal-row">
+          <div>
+            <label>Priority</label>
+            <select id="editPriority">
+              <option value="low">🟢 Low</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="editCategory">
+              <option value="personal">👤 Personal</option>
+              <option value="work">💼 Work</option>
+              <option value="health">❤️ Health</option>
+              <option value="learning">📚 Learning</option>
+              <option value="other">📌 Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Due Date</label>
+            <input type="date" id="editDue"/>
+          </div>
+        </div>
+        <label>Notes</label>
+        <textarea id="editNotes" placeholder="Additional notes (optional)" rows="3"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="modalCancel">Cancel</button>
+        <button class="btn-save" id="modalSave">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
 </body>
 </html>
