@@ -7,8 +7,10 @@ A full-stack task management web app with authentication, built with vanilla Jav
 ---
 
 ## Screenshots
+<img width="1341" height="653" alt="2026-04-06" src="https://github.com/user-attachments/assets/d7593f55-c759-4121-8355-fd5d4f289154" />
 
-> _Add a screenshot here — just drag an image into this file on GitHub_
+<img width="1366" height="657" alt="2026-04-06 (1)" src="https://github.com/user-attachments/assets/c09fe2dc-7c03-4a37-b417-feb93e4e3aa9" />
+
 
 ---
 
